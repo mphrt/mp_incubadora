@@ -63,7 +63,6 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_centered(pdf_obj, canvas_result, x_line_start, line_w, y, w_mm=50, h_mm=18, is_tech=False):
-    """Calcula el centro de la línea y posiciona la firma ahí."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -81,10 +80,10 @@ def add_signature_centered(pdf_obj, canvas_result, x_line_start, line_w, y, w_mm
         x_centered = x_line_start + (line_w - img_w) / 2
         
         if is_tech:
-            # Firma del técnico: 4mm debajo del punto 'y' (donde termina el texto)
+            # Firma del técnico: 4mm debajo de la etiqueta "FIRMA"
             pdf_obj.image(tmp_path, x=x_centered, y=y + 4, w=img_w, h=img_h)
         else:
-            # Firmas de recepción: Original (un poco arriba de la línea)
+            # Firmas de recepción: Estilo estándar (sobre la línea)
             pdf_obj.image(tmp_path, x=x_centered, y=y - img_h - 1, w=img_w, h=img_h)
             
     except Exception as e:
@@ -170,7 +169,6 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         y_current = max(end_left, end_right) + 2
     return y_current
 
-# ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor Multiparámetro")
 
@@ -210,7 +208,6 @@ def main():
             st.session_state.analisis_equipos[i]['serie'] = st.text_input("Número de Serie", key=f"serie_eq_{i}")
         if i > 0:
             with col_btn:
-                st.write(""); 
                 if st.button("−", key=f"remove_btn_{i}"):
                     st.session_state.analisis_equipos.pop(i)
                     st.rerun()
@@ -252,7 +249,6 @@ def main():
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except: logo_h = LOGO_W_MM * 0.8
 
-        # RECUADRO IDEQ 
         pdf.set_font("Arial", "B", 8)
         ideq_txt = f"IDEQ: {ideq}"
         ideq_w = pdf.get_string_width(ideq_txt) + 4
@@ -260,7 +256,6 @@ def main():
         pdf.set_xy(page_w - SIDE_MARGIN - ideq_w, 4)
         pdf.cell(ideq_w, 4.5, ideq_txt, border=1, align="C", fill=True)
 
-        # TÍTULO 
         pdf.set_font("Arial", "B", 7)
         title_y = (logo_y + logo_h) - 5.0
         pdf.set_xy(logo_x + LOGO_W_MM + 4, title_y)
@@ -285,7 +280,6 @@ def main():
         left_field("N/INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
 
-        # ======= TABLAS IZQUIERDA =======
         pdf.ln(2.0); start_y = pdf.get_y()
         create_checkbox_table(pdf, "1.  Inspección y limpieza", inspeccion_limpieza, FIRST_COL_LEFT, ITEM_W, COL_W)
         create_checkbox_table(pdf, "2.  Mediciones seguridad eléctrica", mediciones_seguridad, FIRST_COL_LEFT, ITEM_W, COL_W)
@@ -300,19 +294,25 @@ def main():
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "    Observaciones", observaciones)
         pdf.ln(2); draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, label_w=40); pdf.ln(2)
         
-        # Firma Técnico (Sin negrita y 4mm abajo)
+        # Firma Técnico y Empresa (AJUSTE DE ESPACIADO)
         pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1, "L")
         pdf.set_x(SECOND_COL_LEFT); pdf.cell(14, 4.6, "FIRMA:", 0, 1, "L")
         y_label_firma = pdf.get_y()
-        # is_tech=True aplica los 4mm de separación hacia abajo
+        
+        # Insertar firma técnica
         add_signature_centered(pdf, canvas_tecnico, SECOND_COL_LEFT, 65, y_label_firma, 65, 20, is_tech=True)
         
-        pdf.set_y(y_label_firma + 22); pdf.set_x(SECOND_COL_LEFT)
-        pdf.set_font("Arial", "B", 7.5); pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1); pdf.ln(2)
+        # SALTO DE LÍNEA GARANTIZADO: Empujamos el siguiente campo 26mm abajo del label "FIRMA"
+        pdf.set_y(y_label_firma + 26) 
+        pdf.set_x(SECOND_COL_LEFT)
+        pdf.set_font("Arial", "", 7.5); pdf.cell(35, 4.0, "EMPRESA RESPONSABLE", 0, 0)
+        pdf.cell(COLON_W, 4.0, ":", 0, 0, "C")
+        pdf.cell(0, 4.0, f"{empresa}", 0, 1); pdf.ln(2)
+        
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "    Observaciones (uso interno)", observaciones_interno)
         
-        # FIRMAS DE RECEPCIÓN (Posición original sobre la línea)
+        # FIRMAS DE RECEPCIÓN
         pdf.ln(22); y_linea_firmas = pdf.get_y()
         ancho_firma = col_total_w * 0.45
         
