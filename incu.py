@@ -80,15 +80,14 @@ def add_signature_centered(pdf_obj, canvas_result, x_line_start, line_w, y, w_mm
         x_centered = x_line_start + (line_w - img_w) / 2
         
         if is_tech:
-            # Firma del técnico: 4mm debajo de la etiqueta "FIRMA"
             pdf_obj.image(tmp_path, x=x_centered, y=y + 4, w=img_w, h=img_h)
         else:
-            # Firmas de recepción: Estilo estándar (sobre la línea)
             pdf_obj.image(tmp_path, x=x_centered, y=y - img_h - 1, w=img_w, h=img_h)
             
     except Exception as e:
         st.error(f"Error al añadir imagen: {e}")
 
+# ... (Funciones draw_si_no_boxes, create_checkbox_table, etc. se mantienen igual)
 def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w=36):
     pdf.set_font("Arial", "", 7.5)
     pdf.set_xy(x, y)
@@ -180,6 +179,7 @@ def main():
     fecha = st.date_input("FECHA", value=datetime.date.today())
     ubicacion = st.text_input("UBICACIÓN")
 
+    # ... (Resto de la interfaz Streamlit se mantiene igual)
     def checklist(title, items):
         st.subheader(title)
         respuestas = []
@@ -236,10 +236,10 @@ def main():
         usable_w = page_w - 2 * SIDE_MARGIN
         COL_GAP = 6
         col_total_w = (usable_w - COL_GAP) / 2.0
-        COL_W, FIRST_COL_LEFT = 12.0, SIDE_MARGIN
-        ITEM_W = max(62.0, col_total_w - 3 * COL_W)
+        FIRST_COL_LEFT = SIDE_MARGIN
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
+        ITEM_W = max(62.0, col_total_w - 3 * 12.0)
 
         # ======= ENCABEZADO =======
         logo_x, logo_y, LOGO_W_MM = 2, 2, 60
@@ -249,6 +249,7 @@ def main():
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except: logo_h = LOGO_W_MM * 0.8
 
+        # IDEQ
         pdf.set_font("Arial", "B", 8)
         ideq_txt = f"IDEQ: {ideq}"
         ideq_w = pdf.get_string_width(ideq_txt) + 4
@@ -256,6 +257,7 @@ def main():
         pdf.set_xy(page_w - SIDE_MARGIN - ideq_w, 4)
         pdf.cell(ideq_w, 4.5, ideq_txt, border=1, align="C", fill=True)
 
+        # TÍTULO
         pdf.set_font("Arial", "B", 7)
         title_y = (logo_y + logo_h) - 5.0
         pdf.set_xy(logo_x + LOGO_W_MM + 4, title_y)
@@ -264,9 +266,21 @@ def main():
         content_y_base = max(logo_y + logo_h, title_y + 5.0) + 2
         pdf.set_y(content_y_base)
 
+        # ======= FECHA DEL DOCUMENTO (Restaurada) =======
+        line_h = 3.4
+        x_date = FIRST_TAB_RIGHT - 33.0
+        pdf.set_xy(x_date - 15, content_y_base)
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
+        pdf.set_font("Arial", "", 7.5)
+        pdf.set_xy(x_date, content_y_base)
+        pdf.cell(11, line_h, f"{fecha.day:02d}", 1, 0, "C")
+        pdf.cell(11, line_h, f"{fecha.month:02d}", 1, 0, "C")
+        pdf.cell(11, line_h, f"{fecha.year:04d}", 1, 1, "C")
+
         # ======= CAMPOS DE DATOS SIN NEGRITA =======
-        pdf.set_font("Arial", "", 7.5); line_h = 3.4
-        label_w_common = 35.0; COLON_W = 1.8
+        label_w_common = 35.0
+        COLON_W = 1.8
         
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "", 7.5)
@@ -280,10 +294,11 @@ def main():
         left_field("N/INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
 
+        # ======= TABLAS IZQUIERDA =======
         pdf.ln(2.0); start_y = pdf.get_y()
-        create_checkbox_table(pdf, "1.  Inspección y limpieza", inspeccion_limpieza, FIRST_COL_LEFT, ITEM_W, COL_W)
-        create_checkbox_table(pdf, "2.  Mediciones seguridad eléctrica", mediciones_seguridad, FIRST_COL_LEFT, ITEM_W, COL_W)
-        create_checkbox_table(pdf, "3.  Accesorios del equipo", accesorios_equipo, FIRST_COL_LEFT, ITEM_W, COL_W)
+        create_checkbox_table(pdf, "1.  Inspección y limpieza", inspeccion_limpieza, FIRST_COL_LEFT, ITEM_W, 12.0)
+        create_checkbox_table(pdf, "2.  Mediciones seguridad eléctrica", mediciones_seguridad, FIRST_COL_LEFT, ITEM_W, 12.0)
+        create_checkbox_table(pdf, "3.  Accesorios del equipo", accesorios_equipo, FIRST_COL_LEFT, ITEM_W, 12.0)
         
         pdf.set_x(FIRST_COL_LEFT); pdf.set_fill_color(230, 230, 230); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, "    5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
@@ -294,16 +309,14 @@ def main():
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "    Observaciones", observaciones)
         pdf.ln(2); draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, label_w=40); pdf.ln(2)
         
-        # Firma Técnico y Empresa (AJUSTE DE ESPACIADO)
+        # Firma Técnico (Sin negrita y con espacio abajo)
         pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1, "L")
         pdf.set_x(SECOND_COL_LEFT); pdf.cell(14, 4.6, "FIRMA:", 0, 1, "L")
         y_label_firma = pdf.get_y()
-        
-        # Insertar firma técnica
         add_signature_centered(pdf, canvas_tecnico, SECOND_COL_LEFT, 65, y_label_firma, 65, 20, is_tech=True)
         
-        # SALTO DE LÍNEA GARANTIZADO: Empujamos el siguiente campo 26mm abajo del label "FIRMA"
+        # Salto de línea para Empresa Responsable
         pdf.set_y(y_label_firma + 26) 
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 7.5); pdf.cell(35, 4.0, "EMPRESA RESPONSABLE", 0, 0)
@@ -315,7 +328,6 @@ def main():
         # FIRMAS DE RECEPCIÓN
         pdf.ln(22); y_linea_firmas = pdf.get_y()
         ancho_firma = col_total_w * 0.45
-        
         add_signature_centered(pdf, canvas_ingenieria, SECOND_COL_LEFT+5, ancho_firma, y_linea_firmas, 50, 18, is_tech=False)
         add_signature_centered(pdf, canvas_clinico, SECOND_COL_LEFT + col_total_w - ancho_firma - 5, ancho_firma, y_linea_firmas, 50, 18, is_tech=False)
         
@@ -329,7 +341,6 @@ def main():
         pdf.set_xy(SECOND_COL_LEFT + col_total_w - ancho_firma - 5, y_linea_firmas + 1)
         pdf.multi_cell(ancho_firma, 3, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
 
-        # Descarga
         out = pdf.output(dest="S")
         st.download_button("Descargar PDF", bytes(out) if not isinstance(out, str) else out.encode("latin1"), file_name=f"{ideq}_MP_Monitor_{sn}.pdf", mime="application/pdf")
 
