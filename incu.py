@@ -62,7 +62,7 @@ def _crop_signature(canvas_result):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def add_signature_centered(pdf_obj, canvas_result, x_line_start, line_w, y, w_mm=50, h_mm=18):
+def add_signature_centered(pdf_obj, canvas_result, x_line_start, line_w, y, w_mm=50, h_mm=18, is_tech=False):
     """Calcula el centro de la línea y posiciona la firma ahí."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
@@ -78,10 +78,15 @@ def add_signature_centered(pdf_obj, canvas_result, x_line_start, line_w, y, w_mm
             img_h = h_mm
             img_w = (img.width / img.height) * img_h
         
-        # Centrado horizontal respecto a la línea
         x_centered = x_line_start + (line_w - img_w) / 2
-        # Posicionamiento vertical (se ajusta la firma debajo del texto)
-        pdf_obj.image(tmp_path, x=x_centered, y=y, w=img_w, h=img_h)
+        
+        if is_tech:
+            # Firma del técnico: 4mm debajo del punto 'y' (donde termina el texto)
+            pdf_obj.image(tmp_path, x=x_centered, y=y + 4, w=img_w, h=img_h)
+        else:
+            # Firmas de recepción: Original (un poco arriba de la línea)
+            pdf_obj.image(tmp_path, x=x_centered, y=y - img_h - 1, w=img_w, h=img_h)
+            
     except Exception as e:
         st.error(f"Error al añadir imagen: {e}")
 
@@ -264,19 +269,13 @@ def main():
         content_y_base = max(logo_y + logo_h, title_y + 5.0) + 2
         pdf.set_y(content_y_base)
 
-        # ======= CAMPOS DE DATOS =======
+        # ======= CAMPOS DE DATOS SIN NEGRITA =======
         pdf.set_font("Arial", "", 7.5); line_h = 3.4
-        label_w_common = 35.0; COLON_W = 1.8; GAP_AFTER_COLON = 1.6
+        label_w_common = 35.0; COLON_W = 1.8
         
-        # Fecha
-        x_date = FIRST_TAB_RIGHT - 33.0
-        pdf.set_xy(x_date - 15, content_y_base); pdf.set_font("Arial", "B", 7.5); pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
-        pdf.set_font("Arial", "", 7.5); pdf.set_xy(x_date, content_y_base)
-        pdf.cell(11, line_h, f"{fecha.day:02d}", 1, 0, "C"); pdf.cell(11, line_h, f"{fecha.month:02d}", 1, 0, "C"); pdf.cell(11, line_h, f"{fecha.year:04d}", 1, 1, "C")
-
-        # FUNCIÓN PARA CAMPOS SIN NEGRITA
         def left_field(lbl, val):
-            pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "", 7.5); pdf.cell(label_w_common, line_h, lbl, 0, 0, "L")
+            pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "", 7.5)
+            pdf.cell(label_w_common, line_h, lbl, 0, 0, "L")
             pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
             pdf.cell(0, line_h, str(val), 0, 1, "L")
 
@@ -301,26 +300,24 @@ def main():
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "    Observaciones", observaciones)
         pdf.ln(2); draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, label_w=40); pdf.ln(2)
         
-        # Firma Técnico (Estilos de texto sin negrita y firma posicionada más abajo)
+        # Firma Técnico (Sin negrita y 4mm abajo)
         pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1, "L")
         pdf.set_x(SECOND_COL_LEFT); pdf.cell(14, 4.6, "FIRMA:", 0, 1, "L")
+        y_label_firma = pdf.get_y()
+        # is_tech=True aplica los 4mm de separación hacia abajo
+        add_signature_centered(pdf, canvas_tecnico, SECOND_COL_LEFT, 65, y_label_firma, 65, 20, is_tech=True)
         
-        y_firma_tec = pdf.get_y()
-        # Se aumentó el desplazamiento de 'y' de 15 a 18 para bajar la imagen un poco más
-        add_signature_centered(pdf, canvas_tecnico, SECOND_COL_LEFT, 65, y_firma_tec + 18, 65, 20)
-        
-        # Re-ajuste de los siguientes elementos para que no choquen con la firma
-        pdf.set_y(y_firma_tec + 25); pdf.set_x(SECOND_COL_LEFT)
+        pdf.set_y(y_label_firma + 22); pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "B", 7.5); pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1); pdf.ln(2)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "    Observaciones (uso interno)", observaciones_interno)
         
-        # FIRMAS DE RECEPCIÓN
+        # FIRMAS DE RECEPCIÓN (Posición original sobre la línea)
         pdf.ln(22); y_linea_firmas = pdf.get_y()
         ancho_firma = col_total_w * 0.45
         
-        add_signature_centered(pdf, canvas_ingenieria, SECOND_COL_LEFT+5, ancho_firma, y_linea_firmas, 50, 18)
-        add_signature_centered(pdf, canvas_clinico, SECOND_COL_LEFT + col_total_w - ancho_firma - 5, ancho_firma, y_linea_firmas, 50, 18)
+        add_signature_centered(pdf, canvas_ingenieria, SECOND_COL_LEFT+5, ancho_firma, y_linea_firmas, 50, 18, is_tech=False)
+        add_signature_centered(pdf, canvas_clinico, SECOND_COL_LEFT + col_total_w - ancho_firma - 5, ancho_firma, y_linea_firmas, 50, 18, is_tech=False)
         
         pdf.set_draw_color(0, 0, 0)
         pdf.line(SECOND_COL_LEFT+5, y_linea_firmas, SECOND_COL_LEFT+5 + ancho_firma, y_linea_firmas)
