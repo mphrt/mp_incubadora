@@ -389,8 +389,8 @@ def main():
         pdf.set_y(y_ini)
         l_field("MARCA", marca)
         l_field("MODELO", modelo)
-        l_field("S/N", sn)
-        l_field("N/INVENTARIO", inventario)
+        l_field("NÚMERO DE SERIE", sn)
+        l_field("NÚMERO DE INVENTARIO", inventario)
         l_field("UBICACIÓN", ubicacion)
 
         pdf.ln(2.6)
@@ -448,7 +448,7 @@ def main():
         # Generar
         out = pdf.output(dest="S")
         res = bytes(out) if not isinstance(out, str) else out.encode("latin1")
-        st.download_button("Descargar PDF", res, file_name=f"IDEQ_MP_Incubadora_{sn}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", res, file_name=f"{ideq}_MP_Incubadora_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
