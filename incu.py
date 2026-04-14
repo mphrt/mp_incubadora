@@ -62,7 +62,12 @@ def _crop_signature(canvas_result):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
+def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20, center_on_w=None):
+    """
+    Agrega la firma al PDF. 
+    Si center_on_w tiene un valor (en mm), la firma se centrará horizontalmente 
+    respecto a ese ancho, usando 'x' como punto de origen del área.
+    """
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -76,7 +81,13 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
         if img_h > h_mm:
             img_h = h_mm
             img_w = (img.width / img.height) * img_h
-        pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
+        
+        final_x = x
+        if center_on_w:
+            # Calcula el desplazamiento para centrar la imagen en el espacio dado
+            final_x = x + (center_on_w - img_w) / 2
+            
+        pdf_obj.image(tmp_path, x=final_x, y=y, w=img_w, h=img_h)
     except Exception as e:
         st.error(f"Error al añadir imagen: {e}")
 
@@ -307,7 +318,7 @@ def main():
         except:
             logo_h = LOGO_W_MM * 0.8
 
-        # Recuadro IDEQ (Esquina superior derecha)
+        # Recuadro IDEQ
         pdf.set_font("Arial", "B", 7.5)
         ideq_label = f"IDEQ: {ideq}"
         ideq_w = pdf.get_string_width(ideq_label) + 6
@@ -392,8 +403,10 @@ def main():
         # Firmas Recepción
         y_recep = pdf.get_y()
         w_half = col_total_w / 2
-        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 5, y=y_recep, w_mm=40, h_mm=10)
-        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 5, y=y_recep, w_mm=40, h_mm=10)
+        
+        # El ancho de la línea es (w_half - 10). Usamos center_on_w para centrar la firma sobre ese espacio.
+        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 5, y=y_recep, w_mm=40, h_mm=10, center_on_w=w_half - 10)
+        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 5, y=y_recep, w_mm=40, h_mm=10, center_on_w=w_half - 10)
         
         y_l = y_recep + 11
         pdf.set_draw_color(0,0,0)
@@ -409,7 +422,7 @@ def main():
         # Generar
         out = pdf.output(dest="S")
         res = bytes(out) if not isinstance(out, str) else out.encode("latin1")
-        st.download_button("Descargar PDF", res, file_name=f"IDEQ_{ideq}_MP_Incubadora_{sn}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", res, file_name=f"{ideq}_MP_Incubadora_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
