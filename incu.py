@@ -431,8 +431,8 @@ def main():
         # Firmas Recepción
         y_recep = pdf.get_y()
         w_half = col_total_w / 2
-        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 5, y=y_recep, w_mm=80, h_mm=20, center_on_w=w_half - 10)
-        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 5, y=y_recep, w_mm=80, h_mm=20, center_on_w=w_half - 10)
+        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 10, y=y_recep, w_mm=80, h_mm=20, center_on_w=w_half - 10)
+        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 10, y=y_recep, w_mm=80, h_mm=20, center_on_w=w_half - 10)
         
         y_l = y_recep + 11
         pdf.set_draw_color(0,0,0)
