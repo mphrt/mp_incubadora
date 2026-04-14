@@ -428,20 +428,38 @@ def main():
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "  Observaciones (uso interno)", observaciones_interno)
         pdf.ln(4)
 
-        # Firmas Recepción
-        y_recep = pdf.get_y()
+        # ======= Firmas Recepción (Dimensiones y Posición Actualizadas) =======
+        y_recep = pdf.get_y() + 5  # Espaciado inicial para bajar el bloque
         w_half = col_total_w / 2
-        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 10, y=y_recep, w_mm=80, h_mm=20, center_on_w=w_half - 10)
-        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 10, y=y_recep, w_mm=80, h_mm=20, center_on_w=w_half - 10)
         
-        y_l = y_recep + 11
-        pdf.set_draw_color(0,0,0)
+        # Tamaño de firma aumentado a 80x20 como solicitaste
+        sig_w = 80
+        sig_h = 20
+        
+        # Firma Ingeniería Clínica
+        add_signature_inline(pdf, canvas_result_ingenieria, 
+                             x=SECOND_COL_LEFT + 5, y=y_recep, 
+                             w_mm=sig_w, h_mm=sig_h, center_on_w=w_half - 10)
+        
+        # Firma Personal Clínico
+        add_signature_inline(pdf, canvas_result_clinico, 
+                             x=SECOND_COL_LEFT + w_half + 5, y=y_recep, 
+                             w_mm=sig_w, h_mm=sig_h, center_on_w=w_half - 10)
+        
+        # Bajamos la línea (y_l) para que quede debajo de la nueva altura de 20mm
+        # y_recep (inicio) + 21mm (altura firma + margen)
+        y_l = y_recep + 21 
+        
+        pdf.set_draw_color(0, 0, 0)
+        # Líneas de firma
         pdf.line(SECOND_COL_LEFT + 5, y_l, SECOND_COL_LEFT + w_half - 5, y_l)
         pdf.line(SECOND_COL_LEFT + w_half + 5, y_l, SECOND_COL_LEFT + col_total_w - 5, y_l)
         
+        # Texto de recepción conforme
         pdf.set_font("Arial", "B", 6)
         pdf.set_xy(SECOND_COL_LEFT + 5, y_l + 1)
         pdf.multi_cell(w_half - 10, 2.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
+        
         pdf.set_xy(SECOND_COL_LEFT + w_half + 5, y_l + 1)
         pdf.multi_cell(w_half - 10, 2.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
 
