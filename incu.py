@@ -63,11 +63,6 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20, center_on_w=None):
-    """
-    Agrega la firma al PDF. 
-    Si center_on_w tiene un valor (en mm), la firma se centrará horizontalmente 
-    respecto a ese ancho, usando 'x' como punto de origen del área.
-    """
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -84,7 +79,6 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20, center_
         
         final_x = x
         if center_on_w:
-            # Calcula el desplazamiento para centrar la imagen en el espacio dado
             final_x = x + (center_on_w - img_w) / 2
             
         pdf_obj.image(tmp_path, x=final_x, y=y, w=img_w, h=img_h)
@@ -203,8 +197,20 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Incubadora")
 
+    # --- Configuración de Marcas ---
+    marcas_base = ["DRAGER AIRSHIELD", "GENERAL ELECTRIC", "MEDIX", "FANEM"]
+    marcas_base.sort() 
+    opciones_marca = [""] + marcas_base + ["+ Añadir nueva marca"]
+
     ideq = st.text_input("IDEQ")
-    marca = st.text_input("MARCA")
+    
+    # Menú desplegable para MARCA
+    seleccion_marca = st.selectbox("MARCA", opciones_marca, index=0)
+    if seleccion_marca == "+ Añadir nueva marca":
+        marca = st.text_input("Escribe el nombre de la nueva marca")
+    else:
+        marca = seleccion_marca
+
     modelo = st.text_input("MODELO")
     sn = st.text_input("NÚMERO DE SERIE")
     inventario = st.text_input("NÚMERO DE INVENTARIO")
@@ -287,6 +293,10 @@ def main():
         canvas_result_clinico = st_canvas(fill_color="rgba(255,165,0,0.3)", stroke_width=3, stroke_color="#000000", background_color="#EEEEEE", height=190, width=360, drawing_mode="freedraw", key="canvas_clinico")
 
     if st.button("Generar PDF"):
+        if not marca or marca == "":
+            st.error("Por favor, seleccione o ingrese una marca.")
+            return
+
         SIDE_MARGIN = 9
         TOP_MARGIN = 4
 
@@ -403,8 +413,6 @@ def main():
         # Firmas Recepción
         y_recep = pdf.get_y()
         w_half = col_total_w / 2
-        
-        # El ancho de la línea es (w_half - 10). Usamos center_on_w para centrar la firma sobre ese espacio.
         add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 5, y=y_recep, w_mm=40, h_mm=10, center_on_w=w_half - 10)
         add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 5, y=y_recep, w_mm=40, h_mm=10, center_on_w=w_half - 10)
         
@@ -422,7 +430,7 @@ def main():
         # Generar
         out = pdf.output(dest="S")
         res = bytes(out) if not isinstance(out, str) else out.encode("latin1")
-        st.download_button("Descargar PDF", res, file_name=f"{ideq}_MP_Incubadora_{sn}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", res, file_name=f"IDEQ_MP_Incubadora_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
