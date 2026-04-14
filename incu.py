@@ -202,6 +202,15 @@ def main():
     marcas_base.sort() 
     opciones_marca = [""] + marcas_base + ["+ Añadir nueva marca"]
 
+    # --- Configuración de Modelos ---
+    modelos_base = [
+        "TI500", "GIRAFFE INCUBATOR", "GIRAFFE OMNIBED", 
+        "NATAL CARE STBX", "GIRAFFE INCUBATOR CS", 
+        "GIRAFFE OMNIBED CS", "IT-158-TS"
+    ]
+    modelos_base.sort()
+    opciones_modelo = [""] + modelos_base + ["+ Añadir nuevo modelo"]
+
     ideq = st.text_input("IDEQ")
     
     # Menú desplegable para MARCA
@@ -211,7 +220,13 @@ def main():
     else:
         marca = seleccion_marca
 
-    modelo = st.text_input("MODELO")
+    # Menú desplegable para MODELO
+    seleccion_modelo = st.selectbox("MODELO", opciones_modelo, index=0)
+    if seleccion_modelo == "+ Añadir nuevo modelo":
+        modelo = st.text_input("Escribe el nombre del nuevo modelo")
+    else:
+        modelo = seleccion_modelo
+
     sn = st.text_input("NÚMERO DE SERIE")
     inventario = st.text_input("NÚMERO DE INVENTARIO")
     fecha = st.date_input("FECHA", value=datetime.date.today())
@@ -263,9 +278,9 @@ def main():
         col_eq, col_btn = st.columns([0.9, 0.1])
         with col_eq:
             st.session_state.analisis_equipos[i]["equipo"] = st.text_input("Equipo", key=f"equipo_{i}")
-            st.session_state.analisis_equipos[i]["marca"] = st.text_input("Marca", key=f"marca_{i}")
-            st.session_state.analisis_equipos[i]["modelo"] = st.text_input("Modelo", key=f"modelo_{i}")
-            st.session_state.analisis_equipos[i]["serie"] = st.text_input("Número de Serie", key=f"serie_{i}")
+            st.session_state.analisis_equipos[i]["marca"] = st.text_input("Marca", key=f"marca_instr_{i}")
+            st.session_state.analisis_equipos[i]["modelo"] = st.text_input("Modelo", key=f"modelo_instr_{i}")
+            st.session_state.analisis_equipos[i]["serie"] = st.text_input("Número de Serie", key=f"serie_instr_{i}")
         if i > 0:
             with col_btn:
                 st.write("")
@@ -294,7 +309,10 @@ def main():
 
     if st.button("Generar PDF"):
         if not marca or marca == "":
-            st.error("Por favor, seleccione o ingrese una marca.")
+            st.error("Por favor, seleccione o ingrese una MARCA.")
+            return
+        if not modelo or modelo == "":
+            st.error("Por favor, seleccione o ingrese un MODELO.")
             return
 
         SIDE_MARGIN = 9
@@ -371,8 +389,8 @@ def main():
         pdf.set_y(y_ini)
         l_field("MARCA", marca)
         l_field("MODELO", modelo)
-        l_field("S/N", sn)
-        l_field("N/INVENTARIO", inventario)
+        l_field("NÚMERO DE SERIE", sn)
+        l_field("NÚMERO DE INVENTARIO", inventario)
         l_field("UBICACIÓN", ubicacion)
 
         pdf.ln(2.6)
