@@ -62,11 +62,7 @@ def _crop_signature(canvas_result):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20, center_on_w=None):
-    """
-    center_on_w: Si se proporciona un ancho (mm), la firma se centrará en ese espacio
-    usando 'x' como el inicio de dicho espacio.
-    """
+def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -80,13 +76,7 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20, center_
         if img_h > h_mm:
             img_h = h_mm
             img_w = (img.width / img.height) * img_h
-        
-        # Lógica de centrado automático
-        final_x = x
-        if center_on_w:
-            final_x = x + (center_on_w - img_w) / 2
-
-        pdf_obj.image(tmp_path, x=final_x, y=y, w=img_w, h=img_h)
+        pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
     except Exception as e:
         st.error(f"Error al añadir imagen: {e}")
 
@@ -179,6 +169,7 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         col_w2 = (col_w - gap_cols) / 2.0
         left_x = x_start
         right_x = x_start + col_w2 + gap_cols
+        
         end_left = draw_column_no_lines(left_x, y_current, data_list[0])
         end_right = draw_column_no_lines(right_x, y_current, data_list[1])
         y_current = max(end_left, end_right) + 2
@@ -188,6 +179,7 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         col_w2 = (col_w - gap_cols) / 2.0
         left_x = x_start
         right_x = x_start + col_w2 + gap_cols
+        
         end_left_row2 = draw_column_no_lines(left_x, y_current, data_list[2])
         end_right_row2 = 0
         if num_equipos >= 4:
@@ -196,6 +188,7 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
     
     return y_current
 
+# ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Incubadora")
 
@@ -215,15 +208,31 @@ def main():
             with col1:
                 st.markdown(item)
             with col2:
-                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
+                seleccion = st.radio("", ["OK", "NO", "N/A"],
+                                     horizontal=True, key=item)
             respuestas.append((item, seleccion))
         return respuestas
 
-    chequeo_visual = checklist("1. Chequeo visual (estado de componentes)", ["1.1. Ruedas", "1.2. Gabinetes", "1.3. Cable de poder", "1.4. Puerta"])
-    grupo_motor = checklist("2. Grupo motor", ["2.1. Interruptor de poder", "2.2. Test de encendido", "2.3. Funciones de panel de control operativas", "2.4. Control modo aire operativo", "2.5. Calibración de temperatura aire (+/- 0.2)", "2.6. Motor/Aspa", "2.7. Alarma"])
-    cuerpo = checklist("3. Cuerpo", ["3.1. Bacinete / bandejas", "3.2. Empaquetaduras", "3.3. Estanque humedad", "3.4. Microfiltro de aire", "3.5. Seguro de cúpula", "3.6. Mástil IV"])
-    cupula = checklist("4. Cúpula", ["4.1. Cúpula sin trizaduras", "4.2. Puertas de acceso", "4.3. Aros iris", "4.4. Pestillos"])
-    seguridad_electrica = checklist("5. Seguridad eléctrica", ["5.1. Medición de corrientes de fuga normal condición", "5.2. Medición de corrientes de fuga con neutro abierto"])
+    chequeo_visual = checklist(
+        "1. Chequeo visual (estado de componentes)",
+        ["1.1. Ruedas", "1.2. Gabinetes", "1.3. Cable de poder", "1.4. Puerta"]
+    )
+    grupo_motor = checklist(
+        "2. Grupo motor",
+        ["2.1. Interruptor de poder", "2.2. Test de encendido", "2.3. Funciones de panel de control operativas", "2.4. Control modo aire operativo", "2.5. Calibración de temperatura aire (+/- 0.2)", "2.6. Motor/Aspa", "2.7. Alarma"]
+    )
+    cuerpo = checklist(
+        "3. Cuerpo",
+        ["3.1. Bacinete / bandejas", "3.2. Empaquetaduras", "3.3. Estanque humedad", "3.4. Microfiltro de aire", "3.5. Seguro de cúpula", "3.6. Mástil IV"]
+    )
+    cupula = checklist(
+        "4. Cúpula",
+        ["4.1. Cúpula sin trizaduras", "4.2. Puertas de acceso", "4.3. Aros iris", "4.4. Pestillos"]
+    )
+    seguridad_electrica = checklist(
+        "5. Seguridad eléctrica",
+        ["5.1. Medición de corrientes de fuga normal condición", "5.2. Medición de corrientes de fuga con neutro abierto"]
+    )
 
     st.subheader("6. Instrumentos de análisis")
     if "analisis_equipos" not in st.session_state:
@@ -242,6 +251,7 @@ def main():
             st.session_state.analisis_equipos[i]["serie"] = st.text_input("Número de Serie", key=f"serie_{i}")
         if i > 0:
             with col_btn:
+                st.write("")
                 if st.button("−", key=f"remove_btn_{i}"):
                     st.session_state.analisis_equipos.pop(i)
                     st.rerun()
@@ -266,70 +276,105 @@ def main():
         canvas_result_clinico = st_canvas(fill_color="rgba(255,165,0,0.3)", stroke_width=3, stroke_color="#000000", background_color="#EEEEEE", height=190, width=360, drawing_mode="freedraw", key="canvas_clinico")
 
     if st.button("Generar PDF"):
-        SIDE_MARGIN, TOP_MARGIN = 9, 4
+        SIDE_MARGIN = 9
+        TOP_MARGIN = 4
+
         pdf = PDF("L", "mm", "A4", footer_lines=FOOTER_LINES)
         pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
         pdf.set_auto_page_break(True, margin=TOP_MARGIN + 8)
         pdf.add_page()
 
         page_w = pdf.w
-        usable_w = page_w - 2 * SIDE_MARGIN
         COL_GAP = 6
+        FIRST_COL_LEFT = SIDE_MARGIN
+        usable_w = page_w - 2 * SIDE_MARGIN
         col_total_w = (usable_w - COL_GAP) / 2.0
-        FIRST_TAB_RIGHT = SIDE_MARGIN + col_total_w
-        SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
         COL_W = 12.0
         ITEM_W = max(62.0, col_total_w - 3 * COL_W)
+        FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
+        SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
         # ======= ENCABEZADO =======
-        logo_x, logo_y, LOGO_W_MM = 2, 2, 60
+        logo_x, logo_y = 2, 2
+        LOGO_W_MM = 60
+        sep = 4
+        title_text = "PAUTA MANTENCIÓN INCUBADORA"
+
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
-        except: pass
+            with Image.open("logo_hrt_final.jpg") as im:
+                logo_h = LOGO_W_MM * (im.height / im.width)
+        except:
+            logo_h = LOGO_W_MM * 0.8
 
+        # Recuadro IDEQ (Esquina superior derecha)
         pdf.set_font("Arial", "B", 7.5)
         ideq_label = f"IDEQ: {ideq}"
         ideq_w = pdf.get_string_width(ideq_label) + 6
         pdf.set_xy(page_w - SIDE_MARGIN - ideq_w, logo_y)
+        pdf.set_fill_color(230, 230, 230)
         pdf.cell(ideq_w, 5, ideq_label, border=1, ln=0, align="C", fill=True)
 
-        pdf.set_xy(logo_x + LOGO_W_MM + 4, logo_y + 12)
-        pdf.cell(FIRST_TAB_RIGHT - (logo_x + LOGO_W_MM + 4), 5.0, "PAUTA MANTENCIÓN INCUBADORA", border=1, ln=1, align="C", fill=True)
+        # Título Pauta
+        pdf.set_font("Arial", "B", 7)
+        title_x = logo_x + LOGO_W_MM + sep
+        title_y = (logo_y + logo_h) - 5.0
+        pdf.set_xy(title_x, title_y)
+        pdf.cell(FIRST_TAB_RIGHT - title_x, 5.0, title_text, border=1, ln=1, align="C", fill=True)
 
-        header_bottom = 22
+        header_bottom = max(logo_y + logo_h, title_y + 5.0)
         pdf.set_y(header_bottom + 2)
 
-        # ======= COLUMNA IZQUIERDA =======
+        # ======= COLUMNA IZQUIERDA – datos equipo =======
+        pdf.set_font("Arial", "", 7.5)
+        line_h = 3.4
+        label_w = 35.0
         y_ini = pdf.get_y()
+        
+        # Fecha
         x_date = FIRST_TAB_RIGHT - 33.0
         pdf.set_xy(x_date - 15, y_ini)
-        pdf.set_font("Arial", "B", 7.5); pdf.cell(13, 3.4, "FECHA:", 0, 0, "R"); pdf.set_font("Arial", "", 7.5)
-        pdf.cell(11, 3.4, f"{fecha.day:02d}", 1, 0, "C"); pdf.cell(11, 3.4, f"{fecha.month:02d}", 1, 0, "C"); pdf.cell(11, 3.4, f"{fecha.year:04d}", 1, 1, "C")
+        pdf.set_font("Arial", "B", 7.5); pdf.cell(13, line_h, "FECHA:", 0, 0, "R"); pdf.set_font("Arial", "", 7.5)
+        pdf.set_xy(x_date, y_ini)
+        pdf.cell(11, line_h, f"{fecha.day:02d}", 1, 0, "C")
+        pdf.cell(11, line_h, f"{fecha.month:02d}", 1, 0, "C")
+        pdf.cell(11, line_h, f"{fecha.year:04d}", 1, 1, "C")
+
+        # Datos
+        def l_field(lbl, val):
+            pdf.set_x(FIRST_COL_LEFT)
+            pdf.cell(label_w, line_h, f"{lbl}", 0, 0, "L")
+            pdf.cell(2, line_h, ":", 0, 0, "C")
+            pdf.cell(0, line_h, f"{val}", 0, 1, "L")
 
         pdf.set_y(y_ini)
-        for lbl, val in [("MARCA", marca), ("MODELO", modelo), ("S/N", sn), ("N/INVENTARIO", inventario), ("UBICACIÓN", ubicacion)]:
-            pdf.set_x(SIDE_MARGIN)
-            pdf.set_font("Arial", "B", 7.5); pdf.cell(35, 3.4, lbl, 0, 0); pdf.set_font("Arial", "", 7.5); pdf.cell(0, 3.4, f": {val}", 0, 1)
+        l_field("MARCA", marca)
+        l_field("MODELO", modelo)
+        l_field("S/N", sn)
+        l_field("N/INVENTARIO", inventario)
+        l_field("UBICACIÓN", ubicacion)
 
         pdf.ln(2.6)
-        create_checkbox_table(pdf, "1. Chequeo visual (estado de componentes)", chequeo_visual, SIDE_MARGIN, ITEM_W, COL_W)
-        create_checkbox_table(pdf, "2. Grupo motor", grupo_motor, SIDE_MARGIN, ITEM_W, COL_W)
-        create_checkbox_table(pdf, "3. Cuerpo", cuerpo, SIDE_MARGIN, ITEM_W, COL_W)
-        create_checkbox_table(pdf, "4. Cúpula", cupula, SIDE_MARGIN, ITEM_W, COL_W)
-        create_checkbox_table(pdf, "5. Seguridad eléctrica", seguridad_electrica, SIDE_MARGIN, ITEM_W, COL_W)
+        create_checkbox_table(pdf, "1. Chequeo visual (estado de componentes)", chequeo_visual, FIRST_COL_LEFT, ITEM_W, COL_W)
+        create_checkbox_table(pdf, "2. Grupo motor", grupo_motor, FIRST_COL_LEFT, ITEM_W, COL_W)
+        create_checkbox_table(pdf, "3. Cuerpo", cuerpo, FIRST_COL_LEFT, ITEM_W, COL_W)
+        create_checkbox_table(pdf, "4. Cúpula", cupula, FIRST_COL_LEFT, ITEM_W, COL_W)
+        create_checkbox_table(pdf, "5. Seguridad eléctrica", seguridad_electrica, FIRST_COL_LEFT, ITEM_W, COL_W)
 
         # ======= COLUMNA DERECHA =======
         pdf.set_y(header_bottom + 2)
         pdf.set_x(SECOND_COL_LEFT)
-        pdf.set_font("Arial", "B", 7.5); pdf.cell(col_total_w, 4.0, "  6. Instrumentos de análisis", border=1, ln=1, fill=True)
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(col_total_w, 4.0, "  6. Instrumentos de análisis", border=1, ln=1, fill=True)
         y_bot_an = draw_analisis_columns(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, st.session_state.analisis_equipos)
         
         pdf.set_y(y_bot_an)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "  Observaciones", observaciones)
         pdf.ln(2)
-        draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, label_w=40)
-        
-        pdf.ln(4)
+        draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, size=4.5, label_w=40)
+        pdf.ln(2)
+
+        # Técnico y Firma
         pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.0, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1)
         y_sig_tec = pdf.get_y() + 1
@@ -337,20 +382,21 @@ def main():
         add_signature_inline(pdf, canvas_result_tecnico, x=pdf.get_x() + 2, y=y_sig_tec, w_mm=50, h_mm=12)
         
         pdf.set_y(y_sig_tec + 14)
-        pdf.set_x(SECOND_COL_LEFT); pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1)
+        pdf.set_x(SECOND_COL_LEFT)
+        pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1)
         pdf.ln(2.0)
-        draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "  Observaciones (uso interno)", observaciones_interno)
 
-        # ======= Firmas Recepción (CENTRADAS) =======
-        pdf.ln(5)
+        draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 10, "  Observaciones (uso interno)", observaciones_interno)
+        pdf.ln(4)
+
+        # Firmas Recepción
         y_recep = pdf.get_y()
         w_half = col_total_w / 2
-        
-        # Centrado automático basado en el ancho de la línea (w_half - 10)
-        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 5, y=y_recep, w_mm=40, h_mm=10, center_on_w=w_half - 10)
-        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 5, y=y_recep, w_mm=40, h_mm=10, center_on_w=w_half - 10)
+        add_signature_inline(pdf, canvas_result_ingenieria, x=SECOND_COL_LEFT + 5, y=y_recep, w_mm=40, h_mm=10)
+        add_signature_inline(pdf, canvas_result_clinico, x=SECOND_COL_LEFT + w_half + 5, y=y_recep, w_mm=40, h_mm=10)
         
         y_l = y_recep + 11
+        pdf.set_draw_color(0,0,0)
         pdf.line(SECOND_COL_LEFT + 5, y_l, SECOND_COL_LEFT + w_half - 5, y_l)
         pdf.line(SECOND_COL_LEFT + w_half + 5, y_l, SECOND_COL_LEFT + col_total_w - 5, y_l)
         
@@ -360,10 +406,10 @@ def main():
         pdf.set_xy(SECOND_COL_LEFT + w_half + 5, y_l + 1)
         pdf.multi_cell(w_half - 10, 2.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
 
-        # ======= Generación del archivo =======
+        # Generar
         out = pdf.output(dest="S")
         res = bytes(out) if not isinstance(out, str) else out.encode("latin1")
-        st.download_button("Descargar PDF", res, file_name=f"{ideq}_MP_Incubadora_{sn}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", res, file_name=f"IDEQ_{ideq}_MP_Incubadora_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
